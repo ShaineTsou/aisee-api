@@ -1,14 +1,15 @@
 const express = require("express");
+const bcrypt = require("bcryptjs");
 const app = express();
 
 // Middleware
 app.use(express.json());
 
 class User {
-  constructor(displayName, email, password) {
+  constructor(displayName, email) {
     this.user_id = "125";
     this.display_name = displayName;
-    (this.email = email), (this.password = password);
+    this.email = email;
     this.joined_date = new Date();
     this.results = [];
   }
@@ -23,13 +24,21 @@ class Result {
   }
 }
 
+class Login {
+  constructor(email, hash) {
+    this.user_id = "125";
+    this.id = "989";
+    this.hash = hash;
+    this.email = email;
+  }
+}
+
 const database = {
   users: [
     {
       user_id: "123",
       display_name: "John Doe",
       email: "john@gmail.com",
-      password: "hello123",
       joined_date: new Date(),
       results: [
         {
@@ -64,7 +73,6 @@ const database = {
       user_id: "124",
       display_name: "Jane Doe",
       email: "jane@gmail.com",
-      password: "bye456",
       joined_date: new Date(),
       results: [
         {
@@ -116,31 +124,69 @@ const database = {
       ],
     },
   ],
+  login: [
+    {
+      user_id: "123",
+      id: "987",
+      hash: "$2a$10$gt3mRM5xuYatfgv80vj.medvUz0Tq68ILmtZXp2/n3tVObbvJJx0G",
+      email: "john@gmail.com",
+    },
+    {
+      user_id: "124",
+      id: "988",
+      hash: "$2a$10$f7oYSFy0wzthJZ0SriMO9uXLej9tOOtStEyJF4BUaxpXJWAp1drlC",
+      email: "jane@gmail.com",
+    },
+  ],
 };
 
 app.get("/", (req, res) => {
-  res.status(200).json(database);
+  res.status(200).json("this is working");
 });
 
 app.post("/signin", (req, res) => {
   const { email, password } = req.body;
+  let userId = "";
 
-  if (
-    email === database.users[0].email &&
-    password === database.users[0].password
-  ) {
-    res.status(200).json("success");
-  } else {
-    res.status(400).json("Error signing in");
+  for (let user of database.users) {
+    if (user.email === email) {
+      userId = user.user_id;
+    }
+  }
+
+  if (!userId.length) {
+    res.status(404).json("Error signing in, no such user");
+  }
+
+  for (let userLogin of database.login) {
+    if (userLogin.user_id === userId) {
+      const hash = userLogin.hash;
+
+      bcrypt.compare(password, hash, (err, result) => {
+        if (result) {
+          return res.status(200).json("Success");
+        }
+        return res.status(404).json("Error signing in");
+      });
+    }
   }
 });
 
 app.post("/signup", (req, res) => {
   const { displayName, email, password } = req.body;
-  const newUser = new User(displayName, email, password);
 
-  database.users.push(newUser);
-  res.status(200).json(database.users[database.users.length - 1]);
+  // Generate hashed password
+  bcrypt.genSalt(10, (err, salt) => {
+    bcrypt.hash(password, salt, (err, hash) => {
+      // Instantiate user and login object
+      const newLogin = new Login(email, hash);
+      const newUser = new User(displayName, email);
+
+      database.users.push(newUser);
+      database.login.push(newLogin);
+      res.status(200).json(database.users[database.users.length - 1]);
+    });
+  });
 });
 
 app.get("/profile/:userId", (req, res) => {
