@@ -1,9 +1,11 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
+const cors = require("cors");
 const app = express();
 
 // Middleware
 app.use(express.json());
+app.use(cors());
 
 class User {
   constructor(displayName, email) {
@@ -146,25 +148,25 @@ app.get("/", (req, res) => {
 
 app.post("/signin", (req, res) => {
   const { email, password } = req.body;
-  let userId = "";
+  let userIndex = -1;
 
-  for (let user of database.users) {
-    if (user.email === email) {
-      userId = user.user_id;
+  for (let i = 0; i < database.users.length; i++) {
+    if (database.users[i].email === email) {
+      userIndex = i;
     }
   }
 
-  if (!userId.length) {
+  if (userIndex === -1) {
     res.status(404).json("Error signing in, no such user");
   }
 
   for (let userLogin of database.login) {
-    if (userLogin.user_id === userId) {
+    if (userLogin.user_id === database.users[userIndex].user_id) {
       const hash = userLogin.hash;
 
       bcrypt.compare(password, hash, (err, result) => {
         if (result) {
-          return res.status(200).json("Success");
+          return res.status(200).json(database.users[userIndex]);
         }
         return res.status(404).json("Error signing in");
       });
