@@ -87,12 +87,14 @@ app.post("/signup", (req, res) => {
 
 app.get("/profile/:userId", (req, res) => {
   const { userId } = req.params;
+  // knex.from("users").innerJoin("accounts", "users.id", "accounts.user_id");
   db.select("*")
-    .from("users")
-    .where("user_id", userId)
-    .then((user) => {
-      if (user.length) {
-        res.status(200).json(user[0]);
+    .from("results")
+    .innerJoin("colors", "results.result_id", "colors.result_id")
+    .where("results.user_id", userId)
+    .then((result) => {
+      if (result.length) {
+        res.status(200).json(result);
       } else {
         res.status(400).json("Error getting profile");
       }
@@ -111,7 +113,6 @@ app.post("/image", (req, res) => {
       })
       .returning("result_id")
       .then((result) => {
-        console.log(result);
         colors.forEach(({ raw_hex, value, w3c: { name } }) => {
           trx("colors")
             .insert({
