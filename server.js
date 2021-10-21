@@ -28,7 +28,7 @@ app.post("/signin", (req, res) => {
     .where("email", email)
     .then((hashArr) => {
       if (!hashArr.length) {
-        res.status(400).json("email does not exist");
+        res.status(400).json("Wrong credentials");
       } else {
         let hash = hashArr[0].hash;
         bcrypt.compare(password, hash, (err, isValid) => {
@@ -56,7 +56,6 @@ app.post("/signup", (req, res) => {
     return res.status(400).json("incorrect form submission");
   }
 
-  // Generate hashed password
   bcrypt.genSalt(10, (err, salt) => {
     bcrypt.hash(password, salt, (err, hash) => {
       db.transaction((trx) => {
@@ -103,16 +102,33 @@ app.get("/profile/:userId", (req, res) => {
 
 app.post("/image", (req, res) => {
   const { userId, imageUrl, colors } = req.body;
-
-  db("results")
-    .insert({
-      user_id: userId,
-      image_url: imageUrl,
-      submit_date: new Date(),
-    })
-    .returning("*")
-    .then((result) => res.status(200).json(result[0]))
-    .catch((err) => res.status(400).json("Error storing result"));
+  db.transaction((trx) => {
+    trx("results")
+      .insert({
+        user_id: userId,
+        image_url: imageUrl,
+        submit_date: new Date(),
+      })
+      .returning("result_id")
+      .then((result) => {
+        console.log(result);
+        colors.forEach(({ raw_hex, value, w3c: { name } }) => {
+          trx("colors")
+            .insert({
+              result_id: result[0],
+              w3c_name: name,
+              hex_color: raw_hex,
+              density: value,
+            })
+            .catch((err) =>
+              res.status(400).json(`Error storing color ${name} ${raw_hex}`)
+            );
+        });
+        return res.status(200).json("storing colors success");
+      })
+      .then(trx.commit)
+      .catch(trx.rollback);
+  }).catch((err) => res.status(400).json("Error storing result"));
 });
 
 app.listen(8080, () => {
