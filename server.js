@@ -33,7 +33,11 @@ const getNestedResultsArray = (resultsArr) => {
     if (!nestedObj[id]) {
       nestedObj[id] = {
         resultId: id,
-        submitDate: result.submit_date,
+        submitDate: result.submit_date.toLocaleDateString(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        }),
         imageUrl: result.image_url,
         colors: [color],
       };
@@ -124,8 +128,6 @@ app.get("/profile/:userId", (req, res) => {
       if (result.length) {
         const nestedResultsObj = getNestedResultsArray(result);
         res.status(200).json(nestedResultsObj);
-      } else {
-        res.status(400).json("Error getting profile");
       }
     })
     .catch((err) => res.status(400).json("Not found"));
