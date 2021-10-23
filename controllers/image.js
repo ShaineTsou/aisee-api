@@ -1,3 +1,16 @@
+const Clarifai = require("clarifai");
+
+const app = new Clarifai.App({
+  apiKey: process.env.CLARIFAI_API_KEY,
+});
+
+const handleApiCall = (req, res) => {
+  app.models
+    .predict("eeed0b6733a644cea07cf4c60f87ebb7", req.body.imageUrl)
+    .then((response) => res.status(200).json(response))
+    .catch((err) => res.status(400).json("Unable to work with API"));
+};
+
 const handleImage = (db) => (req, res) => {
   const { userId, imageUrl, colors } = req.body;
   db.transaction((trx) => {
@@ -30,4 +43,5 @@ const handleImage = (db) => (req, res) => {
 
 module.exports = {
   handleImage,
+  handleApiCall,
 };
